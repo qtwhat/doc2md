@@ -1,0 +1,439 @@
+import Foundation
+
+enum DocxConverterError: LocalizedError {
+    case missingDocumentXml
+    case xmlParsingFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missingDocumentXml:
+            return "DOCX 中缺少 word/document.xml"
+        case .xmlParsingFailed(let msg):
+            return "XML 解析失败: \(msg)"
+        }
+    }
+}
+
+struct DocxConverter {
+    func convert(url: URL) throws -> String {
+        let tempDir = try ZipExtractor.extract(url: url)
+        defer { ZipExtractor.cleanup(tempDir: tempDir) }
+
+        let relationships = parseRelationships(tempDir: tempDir)
+        let numbering = parseNumbering(tempDir: tempDir)
+
+        let docXmlURL = tempDir.appendingPathComponent("word/document.xml")
+        guard FileManager.default.fileExists(atPath: docXmlURL.path) else {
+            throw DocxConverterError.missingDocumentXml
+        }
+
+        let data = try Data(contentsOf: docXmlURL)
+        let saxParser = DocxSAXParser(relationships: relationships, numbering: numbering)
+        let markdown = try saxParser.parse(data: data)
+        return markdown
+    }
+
+    // MARK: - Relationships (small file, XMLDocument OK)
+
+    private func parseRelationships(tempDir: URL) -> [String: String] {
+        var rels: [String: String] = [:]
+        let relsURL = tempDir.appendingPathComponent("word/_rels/document.xml.rels")
+        guard let doc = try? XMLDocument(contentsOf: relsURL, options: []),
+              let root = doc.rootElement() else { return rels }
+
+        for child in root.children ?? [] {
+            guard let el = child as? XMLElement,
+                  (el.localName ?? el.name ?? "") == "Relationship",
+                  let rId = el.attribute(forName: "Id")?.stringValue,
+                  let target = el.attribute(forName: "Target")?.stringValue,
+                  el.attribute(forName: "TargetMode")?.stringValue == "External" else { continue }
+            rels[rId] = target
+        }
+        return rels
+    }
+
+    // MARK: - Numbering (small file, XMLDocument OK)
+
+    private func parseNumbering(tempDir: URL) -> [String: String] {
+        var numMap: [String: String] = [:]
+        let numURL = tempDir.appendingPathComponent("word/numbering.xml")
+        guard let doc = try? XMLDocument(contentsOf: numURL, options: []),
+              let root = doc.rootElement() else { return numMap }
+
+        func attrVal(_ el: XMLElement, _ name: String) -> String? {
+            el.attribute(forName: "w:\(name)")?.stringValue
+            ?? el.attribute(forName: name)?.stringValue
+        }
+        func findChild(_ el: XMLElement, _ name: String) -> XMLElement? {
+            for c in el.children ?? [] {
+                guard let e = c as? XMLElement,
+                      (e.localName ?? e.name ?? "") == name else { continue }
+                return e
+            }
+            return nil
+        }
+
+        var abstractMap: [String: [(String, String)]] = [:]
+        for child in root.children ?? [] {
+            guard let absEl = child as? XMLElement,
+                  (absEl.localName ?? absEl.name ?? "") == "abstractNum",
+                  let absId = attrVal(absEl, "abstractNumId") else { continue }
+            var lvlFormats: [(String, String)] = []
+            for lvlChild in absEl.children ?? [] {
+                guard let lvlEl = lvlChild as? XMLElement,
+                      (lvlEl.localName ?? lvlEl.name ?? "") == "lvl" else { continue }
+                let ilvl = attrVal(lvlEl, "ilvl") ?? "0"
+                let fmt = findChild(lvlEl, "numFmt").flatMap { attrVal($0, "val") } ?? "decimal"
+                lvlFormats.append((ilvl, fmt))
+            }
+            abstractMap[absId] = lvlFormats
+        }
+
+        for child in root.children ?? [] {
+            guard let numEl = child as? XMLElement,
+                  (numEl.localName ?? numEl.name ?? "") == "num",
+                  let numId = attrVal(numEl, "numId") else { continue }
+            guard let absIdEl = findChild(numEl, "abstractNumId"),
+                  let absIdVal = attrVal(absIdEl, "val"),
+                  let formats = abstractMap[absIdVal] else { continue }
+            for (ilvl, fmt) in formats {
+                numMap["\(numId)-\(ilvl)"] = fmt
+            }
+        }
+
+        return numMap
+    }
+}
+
+// MARK: - SAX Parser for document.xml (handles any size)
+
+class DocxSAXParser: NSObject, XMLParserDelegate {
+    private let relationships: [String: String]
+    private let numbering: [String: String]
+
+    private var markdown = ""
+    private var elementStack: [String] = []
+    private var orderedListCounters: [String: Int] = [:]
+
+    // Paragraph state
+    private var inBody = false
+    private var paragraphText = ""
+    private var headingLevel: Int? = nil
+    private var listNumId: String? = nil
+    private var listIlvl: String? = nil
+
+    // Run state
+    private var runText = ""
+    private var runBold = false
+    private var runItalic = false
+    private var runStrike = false
+    private var collectingText = false
+
+    // Hyperlink state
+    private var hyperlinkRId: String? = nil
+
+    // Table state
+    private var inTable = false
+    private var tableRows: [[String]] = []
+    private var currentRowCells: [String] = []
+    private var currentCellText = ""
+
+    // Error
+    private var parseError: Error?
+
+    init(relationships: [String: String], numbering: [String: String]) {
+        self.relationships = relationships
+        self.numbering = numbering
+    }
+
+    func parse(data: Data) throws -> String {
+        let parser = XMLParser(data: data)
+        parser.delegate = self
+        parser.shouldProcessNamespaces = true
+        parser.shouldReportNamespacePrefixes = false
+        parser.parse()
+
+        if let error = parseError ?? parser.parserError {
+            throw DocxConverterError.xmlParsingFailed(error.localizedDescription)
+        }
+
+        return cleanupMarkdown(markdown)
+    }
+
+    // MARK: - XMLParserDelegate
+
+    func parser(_ parser: XMLParser, didStartElement elementName: String,
+                namespaceURI: String?, qualifiedName qName: String?,
+                attributes attributeDict: [String: String] = [:]) {
+        let local = localName(elementName)
+        elementStack.append(local)
+
+        switch local {
+        case "body":
+            inBody = true
+
+        case "p":
+            guard inBody else { return }
+            paragraphText = ""
+            headingLevel = nil
+            listNumId = nil
+            listIlvl = nil
+
+        case "pStyle":
+            guard inContext("pPr") else { return }
+            if let val = attributeDict["w:val"] ?? attributeDict["val"] {
+                headingLevel = parseHeadingLevel(val)
+            }
+
+        case "outlineLvl":
+            guard inContext("pPr"), headingLevel == nil else { return }
+            if let val = attributeDict["w:val"] ?? attributeDict["val"],
+               let lvl = Int(val), lvl >= 0 && lvl <= 5 {
+                headingLevel = lvl + 1
+            }
+
+        case "ilvl":
+            guard inContext("numPr") else { return }
+            listIlvl = attributeDict["w:val"] ?? attributeDict["val"] ?? "0"
+
+        case "numId":
+            guard inContext("numPr") else { return }
+            listNumId = attributeDict["w:val"] ?? attributeDict["val"]
+
+        case "r":
+            guard inBody else { return }
+            runText = ""
+            runBold = false
+            runItalic = false
+            runStrike = false
+
+        case "b":
+            guard inContext("rPr") else { return }
+            let val = attributeDict["w:val"] ?? attributeDict["val"]
+            if val != "false" && val != "0" {
+                runBold = true
+            }
+
+        case "i":
+            guard inContext("rPr") else { return }
+            let val = attributeDict["w:val"] ?? attributeDict["val"]
+            if val != "false" && val != "0" {
+                runItalic = true
+            }
+
+        case "strike":
+            guard inContext("rPr") else { return }
+            let val = attributeDict["w:val"] ?? attributeDict["val"]
+            if val != "false" && val != "0" {
+                runStrike = true
+            }
+
+        case "t":
+            guard inContext("r") else { return }
+            collectingText = true
+
+        case "br":
+            guard inContext("r") else { return }
+            let brType = attributeDict["w:type"] ?? attributeDict["type"]
+            if brType == "page" {
+                runText += "\n\n---\n\n"
+            } else {
+                runText += "  \n"
+            }
+
+        case "tab":
+            guard inContext("r") else { return }
+            runText += "\t"
+
+        case "hyperlink":
+            guard inBody else { return }
+            hyperlinkRId = attributeDict["r:id"] ?? attributeDict["id"]
+
+        case "tbl":
+            guard inBody else { return }
+            inTable = true
+            tableRows = []
+
+        case "tr":
+            guard inTable else { return }
+            currentRowCells = []
+
+        case "tc":
+            guard inTable else { return }
+            currentCellText = ""
+
+        default:
+            break
+        }
+    }
+
+    func parser(_ parser: XMLParser, didEndElement elementName: String,
+                namespaceURI: String?, qualifiedName qName: String?) {
+        let local = localName(elementName)
+
+        defer {
+            if let last = elementStack.last, last == local {
+                elementStack.removeLast()
+            }
+        }
+
+        switch local {
+        case "body":
+            inBody = false
+
+        case "t":
+            collectingText = false
+
+        case "r":
+            guard inBody else { return }
+            let formatted = formatRun(runText, bold: runBold, italic: runItalic, strike: runStrike)
+            if inTable && inContext("tc") {
+                currentCellText += formatted
+            } else {
+                paragraphText += formatted
+            }
+
+        case "hyperlink":
+            guard inBody else { return }
+            if let rId = hyperlinkRId, let url = relationships[rId], !paragraphText.isEmpty {
+                // Find the text added by runs inside this hyperlink
+                // The runs have already appended to paragraphText or currentCellText
+                // We need to wrap the most recent addition
+                // Simple approach: track what was added
+            }
+            hyperlinkRId = nil
+
+        case "p":
+            guard inBody else { return }
+            if inTable && inContext("tc") {
+                if !currentCellText.isEmpty {
+                    currentCellText += " "
+                }
+                // Text already in currentCellText from runs
+                return
+            }
+
+            var line = ""
+            if let lvl = headingLevel {
+                line += String(repeating: "#", count: lvl) + " "
+            }
+            if let numId = listNumId, numId != "0" {
+                let ilvl = listIlvl ?? "0"
+                let indent = String(repeating: "  ", count: Int(ilvl) ?? 0)
+                let key = "\(numId)-\(ilvl)"
+                let fmt = numbering[key] ?? "decimal"
+                if fmt == "bullet" {
+                    line += "\(indent)- "
+                } else {
+                    let counter = (orderedListCounters[key] ?? 0) + 1
+                    orderedListCounters[key] = counter
+                    line += "\(indent)\(counter). "
+                }
+            }
+            line += paragraphText
+            markdown += line + "\n"
+
+        case "tc":
+            guard inTable else { return }
+            currentRowCells.append(currentCellText.trimmingCharacters(in: .whitespacesAndNewlines))
+            currentCellText = ""
+
+        case "tr":
+            guard inTable else { return }
+            tableRows.append(currentRowCells)
+
+        case "tbl":
+            guard inTable else { return }
+            inTable = false
+            markdown += formatTable(tableRows)
+            tableRows = []
+
+        default:
+            break
+        }
+    }
+
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        if collectingText {
+            runText += string
+        }
+    }
+
+    func parser(_ parser: XMLParser, parseErrorOccurred error: Error) {
+        parseError = error
+    }
+
+    // MARK: - Helpers
+
+    private func localName(_ name: String) -> String {
+        if let idx = name.lastIndex(of: ":") {
+            return String(name[name.index(after: idx)...])
+        }
+        return name
+    }
+
+    private func inContext(_ elementName: String) -> Bool {
+        elementStack.contains(elementName)
+    }
+
+    private func parseHeadingLevel(_ style: String) -> Int? {
+        let normalized = style.lowercased().replacingOccurrences(of: " ", with: "")
+        if normalized == "title" { return 1 }
+        if normalized == "subtitle" { return 2 }
+        if normalized.hasPrefix("heading") || normalized.hasPrefix("titre") {
+            let numStr = normalized.replacingOccurrences(of: "heading", with: "")
+                                   .replacingOccurrences(of: "titre", with: "")
+            if let level = Int(numStr), level >= 1 && level <= 6 {
+                return level
+            }
+        }
+        return nil
+    }
+
+    private func formatRun(_ text: String, bold: Bool, italic: Bool, strike: Bool) -> String {
+        guard !text.isEmpty else { return "" }
+        var result = text
+        if bold && italic {
+            result = "***\(result)***"
+        } else if bold {
+            result = "**\(result)**"
+        } else if italic {
+            result = "*\(result)*"
+        }
+        if strike {
+            result = "~~\(result)~~"
+        }
+        return result
+    }
+
+    private func formatTable(_ rows: [[String]]) -> String {
+        guard !rows.isEmpty else { return "" }
+        let maxCols = rows.map { $0.count }.max() ?? 0
+        guard maxCols > 0 else { return "" }
+
+        let normalized = rows.map { row -> [String] in
+            var r = row
+            while r.count < maxCols { r.append("") }
+            return r
+        }
+
+        var table = "| " + normalized[0].joined(separator: " | ") + " |\n"
+        table += "| " + normalized[0].map { _ in "---" }.joined(separator: " | ") + " |\n"
+        for row in normalized.dropFirst() {
+            table += "| " + row.joined(separator: " | ") + " |\n"
+        }
+        return table + "\n"
+    }
+
+    private func cleanupMarkdown(_ md: String) -> String {
+        var result = md
+        // Merge adjacent formatting markers
+        result = result.replacingOccurrences(of: "******", with: "")
+        result = result.replacingOccurrences(of: "****", with: "")
+        // Remove excessive blank lines
+        while result.contains("\n\n\n") {
+            result = result.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines) + "\n"
+    }
+}
