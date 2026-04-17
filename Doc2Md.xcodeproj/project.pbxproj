@@ -18,6 +18,25 @@
 		B10000000000000000000009 /* MarkdownWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* MarkdownWriter.swift */; };
 		B100000000000000000000010 /* PdfConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000010 /* PdfConverter.swift */; };
 		B100000000000000000000011 /* PptxConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000011 /* PptxConverter.swift */; };
+		B100000000000000000000012 /* OCRSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000012 /* OCRSettings.swift */; };
+		B100000000000000000000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000013 /* SettingsView.swift */; };
+		B100000000000000000000020 /* PostProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000020 /* PostProcessor.swift */; };
+		B100000000000000000000021 /* ExternalCorrections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000021 /* ExternalCorrections.swift */; };
+		B100000000000000000000022 /* QualityReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000022 /* QualityReport.swift */; };
+		B100000000000000000000023 /* StructuredOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000023 /* StructuredOutput.swift */; };
+		B100000000000000000000024 /* ColumnReconstructor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000024 /* ColumnReconstructor.swift */; };
+		B100000000000000000000025 /* PipelineConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000025 /* PipelineConfig.swift */; };
+		B100000000000000000000026 /* FolderWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000026 /* FolderWatcher.swift */; };
+		B100000000000000000000030 /* AttributedStringToMarkdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000030 /* AttributedStringToMarkdown.swift */; };
+		B100000000000000000000031 /* TextConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000031 /* TextConverter.swift */; };
+		B100000000000000000000032 /* RtfConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000032 /* RtfConverter.swift */; };
+		B100000000000000000000033 /* XHtmlToMarkdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000033 /* XHtmlToMarkdown.swift */; };
+		B100000000000000000000034 /* HtmlConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000034 /* HtmlConverter.swift */; };
+		B100000000000000000000035 /* EpubConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000035 /* EpubConverter.swift */; };
+		B100000000000000000000036 /* OdtConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000036 /* OdtConverter.swift */; };
+		B100000000000000000000037 /* XlsxConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000037 /* XlsxConverter.swift */; };
+		B100000000000000000000038 /* MobiConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000038 /* MobiConverter.swift */; };
+		B100000000000000000000039 /* EpubSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000039 /* EpubSettings.swift */; };
 		B1000000000000000000000C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -32,6 +51,25 @@
 		A10000000000000000000008 /* ZipExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZipExtractor.swift; sourceTree = "<group>"; };
 		A100000000000000000000010 /* PdfConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfConverter.swift; sourceTree = "<group>"; };
 		A100000000000000000000011 /* PptxConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PptxConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000012 /* OCRSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRSettings.swift; sourceTree = "<group>"; };
+		A100000000000000000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A100000000000000000000020 /* PostProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostProcessor.swift; sourceTree = "<group>"; };
+		A100000000000000000000021 /* ExternalCorrections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalCorrections.swift; sourceTree = "<group>"; };
+		A100000000000000000000022 /* QualityReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QualityReport.swift; sourceTree = "<group>"; };
+		A100000000000000000000023 /* StructuredOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructuredOutput.swift; sourceTree = "<group>"; };
+		A100000000000000000000024 /* ColumnReconstructor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnReconstructor.swift; sourceTree = "<group>"; };
+		A100000000000000000000025 /* PipelineConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineConfig.swift; sourceTree = "<group>"; };
+		A100000000000000000000026 /* FolderWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatcher.swift; sourceTree = "<group>"; };
+		A100000000000000000000030 /* AttributedStringToMarkdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttributedStringToMarkdown.swift; sourceTree = "<group>"; };
+		A100000000000000000000031 /* TextConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000032 /* RtfConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RtfConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000033 /* XHtmlToMarkdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XHtmlToMarkdown.swift; sourceTree = "<group>"; };
+		A100000000000000000000034 /* HtmlConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HtmlConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000035 /* EpubConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpubConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000036 /* OdtConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OdtConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000037 /* XlsxConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XlsxConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000038 /* MobiConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000039 /* EpubSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpubSettings.swift; sourceTree = "<group>"; };
 		A10000000000000000000009 /* MarkdownWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownWriter.swift; sourceTree = "<group>"; };
 		A1000000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000000000000000000000B /* Doc2Md.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Doc2Md.entitlements; sourceTree = "<group>"; };
@@ -66,6 +104,9 @@
 				C10000000000000000000002 /* Models */,
 				C10000000000000000000003 /* Converters */,
 				C10000000000000000000004 /* Utilities */,
+				C10000000000000000000007 /* Settings */,
+				C10000000000000000000008 /* Pipeline */,
+				C10000000000000000000009 /* Services */,
 				A1000000000000000000000C /* Assets.xcassets */,
 				A1000000000000000000000A /* Info.plist */,
 				A1000000000000000000000B /* Doc2Md.entitlements */,
@@ -90,6 +131,15 @@
 				A10000000000000000000007 /* ConversionEngine.swift */,
 			A100000000000000000000010 /* PdfConverter.swift */,
 			A100000000000000000000011 /* PptxConverter.swift */,
+			A100000000000000000000030 /* AttributedStringToMarkdown.swift */,
+			A100000000000000000000031 /* TextConverter.swift */,
+			A100000000000000000000032 /* RtfConverter.swift */,
+			A100000000000000000000033 /* XHtmlToMarkdown.swift */,
+			A100000000000000000000034 /* HtmlConverter.swift */,
+			A100000000000000000000035 /* EpubConverter.swift */,
+			A100000000000000000000036 /* OdtConverter.swift */,
+			A100000000000000000000037 /* XlsxConverter.swift */,
+			A100000000000000000000038 /* MobiConverter.swift */,
 			);
 			path = Converters;
 			sourceTree = "<group>";
@@ -101,6 +151,37 @@
 				A10000000000000000000009 /* MarkdownWriter.swift */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000007 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000012 /* OCRSettings.swift */,
+				A100000000000000000000013 /* SettingsView.swift */,
+				A100000000000000000000039 /* EpubSettings.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000008 /* Pipeline */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000020 /* PostProcessor.swift */,
+				A100000000000000000000021 /* ExternalCorrections.swift */,
+				A100000000000000000000022 /* QualityReport.swift */,
+				A100000000000000000000023 /* StructuredOutput.swift */,
+				A100000000000000000000024 /* ColumnReconstructor.swift */,
+				A100000000000000000000025 /* PipelineConfig.swift */,
+			);
+			path = Pipeline;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000009 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000026 /* FolderWatcher.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		C10000000000000000000006 /* Products */ = {
@@ -191,6 +272,25 @@
 				B10000000000000000000009 /* MarkdownWriter.swift in Sources */,
 			B100000000000000000000010 /* PdfConverter.swift in Sources */,
 			B100000000000000000000011 /* PptxConverter.swift in Sources */,
+			B100000000000000000000012 /* OCRSettings.swift in Sources */,
+			B100000000000000000000013 /* SettingsView.swift in Sources */,
+			B100000000000000000000020 /* PostProcessor.swift in Sources */,
+			B100000000000000000000021 /* ExternalCorrections.swift in Sources */,
+			B100000000000000000000022 /* QualityReport.swift in Sources */,
+			B100000000000000000000023 /* StructuredOutput.swift in Sources */,
+			B100000000000000000000024 /* ColumnReconstructor.swift in Sources */,
+			B100000000000000000000025 /* PipelineConfig.swift in Sources */,
+			B100000000000000000000026 /* FolderWatcher.swift in Sources */,
+			B100000000000000000000030 /* AttributedStringToMarkdown.swift in Sources */,
+			B100000000000000000000031 /* TextConverter.swift in Sources */,
+			B100000000000000000000032 /* RtfConverter.swift in Sources */,
+			B100000000000000000000033 /* XHtmlToMarkdown.swift in Sources */,
+			B100000000000000000000034 /* HtmlConverter.swift in Sources */,
+			B100000000000000000000035 /* EpubConverter.swift in Sources */,
+			B100000000000000000000036 /* OdtConverter.swift in Sources */,
+			B100000000000000000000037 /* XlsxConverter.swift in Sources */,
+			B100000000000000000000038 /* MobiConverter.swift in Sources */,
+			B100000000000000000000039 /* EpubSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -211,7 +311,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.doc2md.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -234,7 +334,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.doc2md.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -293,7 +393,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -347,7 +447,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;

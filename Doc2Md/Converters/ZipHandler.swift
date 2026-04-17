@@ -17,7 +17,9 @@ struct ZipHandler {
 
         while let fileURL = enumerator?.nextObject() as? URL {
             let ext = fileURL.pathExtension.lowercased()
-            guard ["docx", "doc", "pdf", "pptx", "ppt"].contains(ext) else { continue }
+            guard ConversionEngine.supportedExtensions.contains(ext),
+                  ext != "zip"  // don't recurse into nested zips from here
+            else { continue }
 
             do {
                 let markdown: String
@@ -30,6 +32,21 @@ struct ZipHandler {
                     markdown = try PdfConverter().convert(url: fileURL)
                 case "pptx", "ppt":
                     markdown = try PptxConverter().convert(url: fileURL)
+                case "xlsx":
+                    markdown = try XlsxConverter().convert(url: fileURL)
+                case "rtf":
+                    markdown = try RtfConverter().convert(url: fileURL)
+                case "html", "htm":
+                    markdown = try HtmlConverter().convert(url: fileURL)
+                case "txt", "md", "markdown":
+                    markdown = try TextConverter().convert(url: fileURL)
+                case "odt":
+                    markdown = try OdtConverter().convert(url: fileURL)
+                case "epub":
+                    // Force single-file mode inside zip batch
+                    markdown = try EpubConverter().convert(url: fileURL)
+                case "mobi", "azw", "azw3":
+                    markdown = try MobiConverter().convert(url: fileURL)
                 default:
                     continue
                 }

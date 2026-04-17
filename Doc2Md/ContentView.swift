@@ -1,6 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - View Model
+
 class ConversionViewModel: ObservableObject {
     @Published var items: [ConversionItem] = []
     private let engine = ConversionEngine()
@@ -8,7 +10,7 @@ class ConversionViewModel: ObservableObject {
     func processFiles(urls: [URL]) {
         for url in urls {
             let ext = url.pathExtension.lowercased()
-            guard ["docx", "doc", "zip", "pdf", "pptx", "ppt"].contains(ext) else { continue }
+            guard ConversionEngine.supportedExtensions.contains(ext) else { continue }
 
             let item = ConversionItem(sourceURL: url)
             DispatchQueue.main.async {
@@ -36,6 +38,19 @@ class ConversionViewModel: ObservableObject {
     }
 }
 
+// MARK: - ContentView
+//
+// Refactor target: performance first.
+//   * No NavigationSplitView / sidebar — AppKit NSVisualEffectView + NSSplitView
+//     first-time layout was the source of the expand-animation stutter.
+//   * No toolbar dropdowns — all configuration is moved to the macOS menu bar
+//     via `.commands` in Doc2MdApp (see CommandMenu("配置")). Menu bar items
+//     only materialise when the user clicks the menu, so they are effectively
+//     free at launch.
+//   * View body is a flat VStack with two children. No @ObservedObject on any
+//     global singleton lives here, so settings changes never invalidate this
+//     view. Conversion progress is the only reactive surface.
+
 struct ContentView: View {
     @StateObject private var viewModel = ConversionViewModel()
     @State private var isTargeted = false
@@ -46,8 +61,10 @@ struct ContentView: View {
             conversionList
         }
         .padding(20)
-        .frame(minWidth: 450, minHeight: 400)
+        .frame(minWidth: 560, minHeight: 440)
     }
+
+    // MARK: - Drop Zone
 
     private var dropZone: some View {
         ZStack {
@@ -65,13 +82,18 @@ struct ContentView: View {
                 Image(systemName: "doc.badge.arrow.up")
                     .font(.system(size: 40))
                     .foregroundColor(.secondary)
-                Text("拖入 .docx / .doc / .pptx / .pdf / .zip")
+                Text("拖入文档")
                     .font(.title3)
                     .foregroundColor(.secondary)
-                Text("转换为 Markdown")
+                Text(".docx .doc .pdf .pptx .xlsx .epub .mobi .rtf .html .odt .txt .md .zip")
                     .font(.caption)
-                    .foregroundColor(.secondary.opacity(0.7))
+                    .foregroundColor(.secondary.opacity(0.8))
+                Text("支持 \(ConversionEngine.supportedExtensions.count) 种格式 · 转换为 Markdown")
+                    .font(.caption2)
+                    .foregroundColor(.secondary.opacity(0.6))
             }
+            .padding(.horizontal, 16)
+            .multilineTextAlignment(.center)
         }
         .frame(height: 180)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
@@ -79,6 +101,8 @@ struct ContentView: View {
             return true
         }
     }
+
+    // MARK: - Conversion List
 
     private var conversionList: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -97,6 +121,8 @@ struct ContentView: View {
             }
         }
     }
+
+    // MARK: - Drop Handling
 
     private func handleDrop(providers: [NSItemProvider]) {
         var urls: [URL] = []
@@ -127,6 +153,8 @@ struct ContentView: View {
         }
     }
 }
+
+// MARK: - Conversion Row
 
 struct ConversionRow: View {
     @ObservedObject var item: ConversionItem
@@ -169,6 +197,22 @@ struct ConversionRow: View {
                 Image(systemName: "doc.text")
             case "pptx", "ppt":
                 Image(systemName: "rectangle.on.rectangle")
+            case "xlsx":
+                Image(systemName: "tablecells")
+            case "epub":
+                Image(systemName: "book")
+            case "mobi", "azw", "azw3":
+                Image(systemName: "book.closed")
+            case "rtf":
+                Image(systemName: "doc.richtext")
+            case "html", "htm":
+                Image(systemName: "globe")
+            case "txt":
+                Image(systemName: "doc.plaintext")
+            case "md", "markdown":
+                Image(systemName: "text.alignleft")
+            case "odt":
+                Image(systemName: "doc")
             default:
                 Image(systemName: "doc.richtext")
             }
