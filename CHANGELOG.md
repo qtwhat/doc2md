@@ -5,6 +5,31 @@
 
 ---
 
+## [1.3.0] – 2026-05-01
+
+### Added
+
+- **EML 邮件格式支持** — 新增 `.eml` → Markdown 转换。覆盖：
+  - RFC 5322 头部解析（含 folded headers / RFC 2047 encoded-word 解码，支持 `=?UTF-8?B?...?=` 和 `=?UTF-8?Q?...?=`）
+  - `multipart/*` 走 boundary 切片，优先 `text/html`，回落 `text/plain`，支持嵌套 multipart
+  - Content-Transfer-Encoding 完整解码：`base64` / `quoted-printable` / `7bit` / `8bit`
+  - HTML body 复用现有 `XHtmlToMarkdown`；plain text 段落感知（保留空白行段落分隔，单换行视为软换行合并）
+  - 输出格式：`# Subject` 顶部 + `From / To / Cc / Date` 元信息块 + `---` 分隔线 + 正文 Markdown
+
+### Fixed
+
+- **段落分隔丢失（关键 bug）** — DocxConverter / DOC / RTF / PPT legacy 转换链原本在段落末尾仅输出 `\n`，被 Markdown 渲染器视为软换行（soft break），导致**多个段落塌陷为一段**。修复后每段以 `\n\n` 结尾，符合 Markdown 段落分隔规范，在 GitHub / Obsidian / VS Code / Typora 等渲染器中正确分段。
+  - 影响文件：`DocxConverter.swift`、`AttributedStringToMarkdown.swift`
+  - 副作用：连续 bullet 项变为 "loose list"（项间空一行）—— 仍为合法 Markdown，且 `cleanupMarkdown` / `PostProcessor.cleanWhitespace` 保留 3+ 空行折叠为 2，无过度空白
+  - 设计取舍：选择"激进分段"而非"保守合段"，因为合并段落是语义损失（不可逆），而 loose list 仅是渲染样式差异
+
+### Changed
+
+- 主窗口拖放区提示文字增加 `.eml`
+- 支持格式总数：14 → **15**
+
+---
+
 ## [1.2.0] – 2026-04-17
 
 ### 架构重构：性能优先 · 配置集中
@@ -71,6 +96,7 @@
 
 ---
 
+[1.3.0]: #130--2026-05-01
 [1.2.0]: #120--2026-04-17
 [1.1.0]: #110--2026-q1
 [1.0.0]: #100--初始版本

@@ -331,7 +331,12 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
                 }
             }
             line += paragraphText
-            markdown += line + "\n"
+            // Markdown spec: paragraphs are separated by a BLANK LINE (\n\n).
+            // A single \n collapses adjacent paragraphs into one render block
+            // (soft break). We always emit \n\n; consecutive list items become
+            // a "loose list" (still valid Markdown). cleanupMarkdown below
+            // collapses 3+ newlines back to 2, so over-spacing is bounded.
+            markdown += line + "\n\n"
 
         case "tc":
             guard inTable else { return }

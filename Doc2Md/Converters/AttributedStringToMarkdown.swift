@@ -35,12 +35,11 @@ struct AttributedStringToMarkdown {
                 line += formatted
             }
 
-            markdown += line + "\n"
-            if heading.isEmpty && prefix.isEmpty {
-                markdown += "\n"
-            } else if !heading.isEmpty {
-                markdown += "\n"
-            }
+            // Markdown spec: paragraphs need a blank line between them. A
+            // single \n is a soft break and collapses paragraphs in render.
+            // We unconditionally emit \n\n; consecutive list items become
+            // loose (still valid). cleanupMarkdown collapses 3+ blank lines.
+            markdown += line + "\n\n"
         }
 
         return cleanupMarkdown(markdown)

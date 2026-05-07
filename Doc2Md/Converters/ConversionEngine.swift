@@ -30,6 +30,8 @@ struct ConversionEngine {
         "odt",
         // Ebook
         "epub", "mobi", "azw", "azw3",
+        // Email
+        "eml",
         // Archive
         "zip",
     ]
@@ -86,6 +88,11 @@ struct ConversionEngine {
 
         case "mobi", "azw", "azw3":
             let markdown = try MobiConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
+        case "eml":
+            let markdown = try EmlConverter().convert(url: url)
             let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
             return [outputURL]
 

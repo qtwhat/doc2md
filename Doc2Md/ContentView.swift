@@ -85,7 +85,7 @@ struct ContentView: View {
                 Text("拖入文档")
                     .font(.title3)
                     .foregroundColor(.secondary)
-                Text(".docx .doc .pdf .pptx .xlsx .epub .mobi .rtf .html .odt .txt .md .zip")
+                Text(".docx .doc .pdf .pptx .xlsx .epub .mobi .rtf .html .odt .txt .md .eml .zip")
                     .font(.caption)
                     .foregroundColor(.secondary.opacity(0.8))
                 Text("支持 \(ConversionEngine.supportedExtensions.count) 种格式 · 转换为 Markdown")
@@ -203,6 +203,8 @@ struct ConversionRow: View {
                 Image(systemName: "book")
             case "mobi", "azw", "azw3":
                 Image(systemName: "book.closed")
+            case "eml":
+                Image(systemName: "envelope")
             case "rtf":
                 Image(systemName: "doc.richtext")
             case "html", "htm":
