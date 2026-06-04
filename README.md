@@ -431,12 +431,9 @@ xcrun notarytool store-credentials mydev \
 
 <img src="docs/icon.png" width="120" align="left" hspace="20" alt="Doc2Md icon">
 
-App 图标里那只抱着 `.md` 牌子的黑猫由 [TODO: 填来源] 制作。如果你也喜欢它，可以在 issue 区给个 star。
+App 图标里那只从 `.md` 牌子后面探出头的黑猫由 ChatGPT 生成。如果你也觉得它可爱，欢迎在 repo 给个 star。
 
 <br clear="left">
-
-> [!NOTE]
-> 图标来源占位等你补：是 ChatGPT 4o / Midjourney / DALL-E 出的还是哪位设计师画的？把这一段替换掉就行。
 
 ---
 
