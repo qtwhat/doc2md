@@ -5,6 +5,92 @@
 
 ---
 
+## [1.6.0] – 2026-06-04
+
+清掉 v1.5 之前 Roadmap 上的几项（音频转写暂缓）。
+
+### Added
+
+- **DOCX "List Paragraph" 样式识别** — Word 经常对列表段落只打 `pStyle="ListParagraph"` 这种样式名，不带 `<w:numPr>` 绑定到 numbering。之前这种段落会被输出成普通文本（用户的 3GPP 文档里 5 个「类型」bullet 全部丢失就是这个 bug 引起的）。新增 `parseListStyle()`，识别 `ListParagraph` / `ListBullet` / `ListNumber` / `BulletList` / `NumberList` 等样式名，没 numPr 时也用 `-` 或 `1.` 默认 marker。
+- **DOCX 嵌入图片提取** — `DocxConverter` 新增 `assetsDir` 与 `assetsRelativePrefix` 字段。设置后从 `_rels/document.xml.rels` 抽出 image relationship，从 `word/media/*` 复制图片到 `<basename>_assets/` 旁路目录，SAX parser 识别 `<a:blip r:embed="rIdN">` 并在段落里插入 `![](assets/image1.png)`。CLI stdout 模式不抽（无法 reference 本地文件）。
+- **ColumnReconstructor v2** — 之前只对 PDF 首页跑双栏检测，其余页用简单 top-to-bottom 排序。v2 让所有页都过 ColumnReconstructor，由它内部判断单/多栏；同时加了三条 false-positive 保护（>4 栏拒绝、单栏占比 >80% 拒绝、可由 `forceColumns: true` 跳过保护）。
+- **OCR 表格还原** — 新文件 `Pipeline/TableDetector.swift`。扫描 Vision observations 找出网格状簇（≥3 行 × ≥2 列，列 X-center 在 4% 容差内对齐），抽出来渲染成 Markdown 表格；剩余 observation 继续走 ColumnReconstructor 出正文。PdfConverter 和 ImageConverter 共用，对你那张医院体检单的「AO 31mm / LA 35mm / IVSd 9mm / ...」这种 4 列 4 行的检测表格应该能识别成 Markdown 表格了。
+- **release.sh** — 新建独立 release 打包脚本。无 cert 时跑：clean build + .dmg + SHA-256；设 `DEVELOPER_ID` 时附加 codesign；设 `NOTARY_PROFILE` 时附加 notarytool 提交 + staple。脚本里写明 notarization 一次性凭据配置流程。
+
+### Changed
+
+- DocxConverter 改成 `struct` mutable，加 `assetsDir` 字段
+- DocxSAXParser init 新增 `imageRefs` 参数（默认空，保持向后兼容）
+- PdfConverter 的 OCR 路径去掉 `simpleTextFromObservations`，统一走 ColumnReconstructor
+
+---
+
+## [1.5.0] – 2026-06-04
+
+### Added
+
+借鉴 Microsoft markitdown 的覆盖广度，补齐 6 类新格式 + 1 套基础设施 + CLI 接口。所有路径仍走本地，无任何云端依赖。
+
+- **CLI 模式（dual-mode 单二进制）** — 新文件 `CLI/CLIDispatcher.swift`。`Doc2MdApp.init()` 检测到非 `-psn_` 命令行参数即转入 CLI，跑完直接 `exit`，SwiftUI 永不启动、dock 图标永不出现。语义对齐 markitdown CLI：
+  - `doc2md INPUT [INPUT ...]` 批量转换，写 `.md` 到同目录
+  - `doc2md INPUT -o OUTPUT` / `doc2md INPUT -o -` 自定义路径或 stdout
+  - `cat INPUT.docx | doc2md -i docx` stdin 输入（须 `-i` 给扩展名提示）
+  - `--list-formats` / `--help` / `--version`
+  - 与 GUI 共用同一份 OCR / Pipeline / 纠错词典 设置
+  - 新增 `ConversionEngine.convertToMarkdown(url:) throws -> String` 直返字符串（不落盘），CLI stdout 模式专用
+
+- **Outlook `.msg` 支持** — 新文件 `Converters/MsgConverter.swift`，内嵌一个 ~250 行的 OLE Compound Document（CFB）解析器：512-byte v3 sector / FAT chain / mini-FAT / 目录线性扫描。直接读取 MAPI Property Tag stream（`__substg1.0_XXXXYYYY`）：
+  - Subject (0037) / Sender (0C1A + 0C1F) / DisplayTo (0E04) / DisplayCc (0E03)
+  - PR_BODY (1000) 与 PR_BODY_HTML (1013)，优先 HTML 走 `XHtmlToMarkdown`
+  - PR_TRANSPORT_MESSAGE_HEADERS (007D) 中抓 `Date:` 行
+  - 输出：`# Subject` + From / To / Cc / Date + 正文 Markdown
+- **CSV / TSV 支持** — `Converters/CsvConverter.swift`，quote-aware 解析器（嵌入逗号、嵌入换行、`""` 转义引号），自动嗅探分隔符（`,` / `;` / `\t`），输出 Markdown 表格，单元格内的 `|` 转义、`\n` 转 `<br>`。
+- **JSON 支持** — `Converters/JsonConverter.swift`，`JSONSerialization` + `.sortedKeys` + `.prettyPrinted` 输出 fenced code block，diff 稳定；解析失败回落原文输出。
+- **XML 支持** — `Converters/XmlConverter.swift`，`XMLDocument` 美化输出 fenced code block，畸形回落原文。
+- **Jupyter Notebook `.ipynb` 支持** — `Converters/IpynbConverter.swift`，按 nbformat v4 schema 解析：markdown cell 直出、code cell 按 kernelspec language fenced、raw cell 直出，outputs 默认跳过。
+- **图片 EXIF 元数据** — 新文件 `Converters/MetadataExtractor.swift`，从 `CGImageSource` 抓取 TIFF / EXIF / GPS / IPTC：ImageSize / Make / Model / Artist / DateTimeOriginal / LensModel / FocalLength / Aperture / ISO / ExposureTime / GPSPosition / GPSAltitude / Title / Description / Keywords。即使 OCR 无文本也输出元数据（用于存档），有文本则元数据 + `---` + OCR 文本拼接。
+- **文件类型 magic-byte 检测** — 新文件 `Converters/FileTypeDetector.swift`，签名表覆盖 PDF / ZIP-family / OLE-family / PNG / JPEG / GIF / BMP / TIFF / HEIC / WebP / RTF，并维护「family」表（ZIP magic 不会把 `.docx` 改写为 `.zip`，OLE magic 不会把 `.doc` 改写为 `.msg`）。`ConversionEngine.convert(url:)` 入口使用 magic 解析后的扩展名，使应用对扩展名错误或缺失的文件鲁棒。
+
+### Changed
+
+- 主窗口拖放区提示文字、ConversionRow 文件图标扩展覆盖（envelope / tablecells / curlybraces / function / photo）。
+- 支持格式总数：25 → **31**（新增 msg / csv / tsv / json / xml / ipynb）。
+
+### Comparison with Microsoft markitdown
+
+| 维度 | markitdown | Doc2Md 1.5 |
+|---|---|---|
+| OCR | 云端 LLM（付费）或 Azure DI / CU（付费） | 本地 Vision，免费，CJK auto-detect |
+| Outlook | `.msg` ✅ | `.msg` ✅ + `.eml` ✅ |
+| 格式数 | ~20+ | 31 |
+| EXIF | exiftool（外部依赖） | CGImageSource（内置） |
+| 文件检测 | magika ML 模型 + StreamInfo | magic-byte 签名表 |
+| 调度 | accepts() + priority + 插件 | 扩展名 switch（+ magic 前置解析） |
+| CLI | `markitdown FILE -o OUT` | `doc2md FILE -o OUT`（同语义，dual-mode 单二进制） |
+
+---
+
+## [1.4.0] – 2026-05-07
+
+### Fixed
+
+- **OCR 中文识别失败（关键 bug）** — 默认 OCR 设置（primary=en, secondary=zh-Hans）让 Vision 以英文模型为主，对中文为主的图片产生大量乱码（如把"mm"识别为俄文 `лит`，把中文段落识别为符号串）。修复方式：启用 `VNRecognizeTextRequest.automaticallyDetectsLanguage`（macOS 13+），让 Vision 自己根据图片脚本选模型。Settings → OCR → 「自动语言检测（推荐）」**默认开启**，手动语言下拉框在自动模式下灰显但保留。
+
+### Added
+
+- **图片格式 OCR 支持** — 新增 `.png` / `.jpg` / `.jpeg` / `.heic` / `.heif` / `.tiff` / `.tif` / `.bmp` / `.gif` / `.webp` → Markdown，无需先转 PDF。新文件 `Converters/ImageConverter.swift`。
+  - **直接走 Vision OCR**：跳过 PDF 中转，单次 `VNRecognizeTextRequest`，与 PDF OCR 共用识别语言、custom hint words、PostProcessor、ExternalCorrections、paragraph-bracket fix
+  - **EXIF 朝向自动校正**：iPhone 拍照、扫描件常带非默认 orientation，CIImage `.oriented(_:)` 处理
+  - **小图自动放大**：长边 < 1500px 时按 OCRRenderScale 倍率上采样（`high` 插值），改善细小字体识别
+  - **输出格式**：`# {filename}` 标题 + OCR 处理后正文
+
+### Changed
+
+- 主窗口拖放区提示文字与图标增加图片相关条目
+- 支持格式总数：15 → **25**
+
+---
+
 ## [1.3.0] – 2026-05-01
 
 ### Added
@@ -96,6 +182,9 @@
 
 ---
 
+[1.6.0]: #160--2026-06-04
+[1.5.0]: #150--2026-06-04
+[1.4.0]: #140--2026-05-07
 [1.3.0]: #130--2026-05-01
 [1.2.0]: #120--2026-04-17
 [1.1.0]: #110--2026-q1

@@ -75,6 +75,15 @@ class OCRSettings: ObservableObject {
         didSet { UserDefaults.standard.set(enableOCRCorrection, forKey: "ocrEnableCorrection") }
     }
 
+    /// When true, Vision auto-detects the script in the image (CJK / Latin /
+    /// etc.) and ignores the manual primary/secondary language pickers below.
+    /// This is the recommended default — it's what makes a Chinese-dominant
+    /// document OCR correctly even if the user hasn't manually set Chinese
+    /// as primary. When false, the manual language order applies.
+    @Published var automaticallyDetectsLanguage: Bool {
+        didSet { UserDefaults.standard.set(automaticallyDetectsLanguage, forKey: "ocrAutoDetect") }
+    }
+
     init() {
         let scale = UserDefaults.standard.double(forKey: "ocrRenderScale")
         self.renderScale = OCRRenderScale(rawValue: scale) ?? .medium
@@ -92,6 +101,12 @@ class OCRSettings: ObservableObject {
             self.enableOCRCorrection = true
         } else {
             self.enableOCRCorrection = UserDefaults.standard.bool(forKey: "ocrEnableCorrection")
+        }
+
+        if UserDefaults.standard.object(forKey: "ocrAutoDetect") == nil {
+            self.automaticallyDetectsLanguage = true
+        } else {
+            self.automaticallyDetectsLanguage = UserDefaults.standard.bool(forKey: "ocrAutoDetect")
         }
     }
 

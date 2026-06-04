@@ -15,12 +15,24 @@ enum DocxConverterError: LocalizedError {
 }
 
 struct DocxConverter {
+    /// Set this on the converter instance to enable embedded image extraction.
+    /// When non-nil, images in `word/media/*` are copied to `assetsDir` and the
+    /// resulting Markdown references them by relative path. When nil, images
+    /// are ignored (Markdown contains text only). String-mode output (CLI
+    /// stdout) leaves this nil.
+    var assetsDir: URL? = nil
+    /// Path prefix to use when emitting `![](...)` references. Usually the
+    /// basename of `assetsDir` (e.g. `report_assets`). When nil, paths are
+    /// relative to assetsDir itself.
+    var assetsRelativePrefix: String? = nil
+
     func convert(url: URL) throws -> String {
         let tempDir = try ZipExtractor.extract(url: url)
         defer { ZipExtractor.cleanup(tempDir: tempDir) }
 
         let relationships = parseRelationships(tempDir: tempDir)
         let numbering = parseNumbering(tempDir: tempDir)
+        let imageRefs = extractImages(tempDir: tempDir)
 
         let docXmlURL = tempDir.appendingPathComponent("word/document.xml")
         guard FileManager.default.fileExists(atPath: docXmlURL.path) else {
@@ -28,9 +40,68 @@ struct DocxConverter {
         }
 
         let data = try Data(contentsOf: docXmlURL)
-        let saxParser = DocxSAXParser(relationships: relationships, numbering: numbering)
+        let saxParser = DocxSAXParser(
+            relationships: relationships,
+            numbering: numbering,
+            imageRefs: imageRefs
+        )
         let markdown = try saxParser.parse(data: data)
         return markdown
+    }
+
+    // MARK: - Image Extraction
+    //
+    // Reads <Relationship Type="...image" Target="media/imageN.ext"> from
+    // document.xml.rels, copies each media file from the unzipped temp dir
+    // to assetsDir, and returns a [rId: markdownPath] map. If assetsDir
+    // is nil, returns an empty map (images skipped).
+
+    private func extractImages(tempDir: URL) -> [String: String] {
+        guard let assetsDir = assetsDir else { return [:] }
+
+        let relsURL = tempDir.appendingPathComponent("word/_rels/document.xml.rels")
+        guard let doc = try? XMLDocument(contentsOf: relsURL, options: []),
+              let root = doc.rootElement() else { return [:] }
+
+        var imageRels: [(rId: String, target: String)] = []
+        for child in root.children ?? [] {
+            guard let el = child as? XMLElement,
+                  (el.localName ?? el.name ?? "") == "Relationship",
+                  let type = el.attribute(forName: "Type")?.stringValue,
+                  type.contains("/image"),
+                  let rId = el.attribute(forName: "Id")?.stringValue,
+                  let target = el.attribute(forName: "Target")?.stringValue
+            else { continue }
+            imageRels.append((rId, target))
+        }
+        guard !imageRels.isEmpty else { return [:] }
+
+        // Create assets dir
+        try? FileManager.default.createDirectory(
+            at: assetsDir, withIntermediateDirectories: true)
+
+        var refs: [String: String] = [:]
+        for (rId, target) in imageRels {
+            // target is typically "media/image1.png" — strip "media/" prefix
+            // for the output filename. Otherwise keep the basename only.
+            let src = tempDir.appendingPathComponent("word/")
+                .appendingPathComponent(target)
+            let basename = src.lastPathComponent
+            let dst = assetsDir.appendingPathComponent(basename)
+            try? FileManager.default.removeItem(at: dst)
+            do {
+                try FileManager.default.copyItem(at: src, to: dst)
+            } catch { continue }
+
+            let mdPath: String
+            if let prefix = assetsRelativePrefix {
+                mdPath = "\(prefix)/\(basename)"
+            } else {
+                mdPath = basename
+            }
+            refs[rId] = mdPath
+        }
+        return refs
     }
 
     // MARK: - Relationships (small file, XMLDocument OK)
@@ -110,6 +181,9 @@ struct DocxConverter {
 class DocxSAXParser: NSObject, XMLParserDelegate {
     private let relationships: [String: String]
     private let numbering: [String: String]
+    /// Map of relationship ID → markdown path for embedded images.
+    /// Empty when image extraction is disabled.
+    private let imageRefs: [String: String]
 
     private var markdown = ""
     private var elementStack: [String] = []
@@ -121,6 +195,13 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
     private var headingLevel: Int? = nil
     private var listNumId: String? = nil
     private var listIlvl: String? = nil
+    /// True when the paragraph's pStyle is a known "list paragraph" style
+    /// (e.g. "ListParagraph", "ListBullet", "ListNumber"). Some Word
+    /// documents apply these styles without an inline <w:numPr>, in which
+    /// case the paragraph is still semantically a list item.
+    private var listStyleKind: ListStyleKind? = nil
+
+    enum ListStyleKind { case bullet, number }
 
     // Run state
     private var runText = ""
@@ -141,9 +222,12 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
     // Error
     private var parseError: Error?
 
-    init(relationships: [String: String], numbering: [String: String]) {
+    init(relationships: [String: String],
+         numbering: [String: String],
+         imageRefs: [String: String] = [:]) {
         self.relationships = relationships
         self.numbering = numbering
+        self.imageRefs = imageRefs
     }
 
     func parse(data: Data) throws -> String {
@@ -178,11 +262,15 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
             headingLevel = nil
             listNumId = nil
             listIlvl = nil
+            listStyleKind = nil
 
         case "pStyle":
             guard inContext("pPr") else { return }
             if let val = attributeDict["w:val"] ?? attributeDict["val"] {
                 headingLevel = parseHeadingLevel(val)
+                if headingLevel == nil {
+                    listStyleKind = parseListStyle(val)
+                }
             }
 
         case "outlineLvl":
@@ -248,6 +336,23 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
         case "hyperlink":
             guard inBody else { return }
             hyperlinkRId = attributeDict["r:id"] ?? attributeDict["id"]
+
+        case "blip":
+            // DrawingML <a:blip r:embed="rIdN" /> — emit ![](path) reference
+            // if the rel ID has a known media target. We append it to the
+            // current paragraph (or table cell) text so the image appears at
+            // roughly the right point in the flow.
+            guard inBody else { return }
+            let rId = attributeDict["r:embed"] ?? attributeDict["embed"]
+                  ?? attributeDict["r:link"]  ?? attributeDict["link"]
+            if let rId = rId, let path = imageRefs[rId] {
+                let marker = "![](\(path))"
+                if inTable && inContext("tc") {
+                    currentCellText += marker
+                } else {
+                    paragraphText += marker
+                }
+            }
 
         case "tbl":
             guard inBody else { return }
@@ -329,6 +434,21 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
                     orderedListCounters[key] = counter
                     line += "\(indent)\(counter). "
                 }
+            } else if let kind = listStyleKind {
+                // Paragraph uses a "list paragraph" pStyle but has no inline
+                // numPr. Apply a default bullet/number marker so the output
+                // still reads as a list. This catches the common pattern of
+                // Word docs that apply "ListParagraph" without binding to a
+                // numbering definition.
+                switch kind {
+                case .bullet:
+                    line += "- "
+                case .number:
+                    let key = "style-number"
+                    let counter = (orderedListCounters[key] ?? 0) + 1
+                    orderedListCounters[key] = counter
+                    line += "\(counter). "
+                }
             }
             line += paragraphText
             // Markdown spec: paragraphs are separated by a BLANK LINE (\n\n).
@@ -379,6 +499,27 @@ class DocxSAXParser: NSObject, XMLParserDelegate {
 
     private func inContext(_ elementName: String) -> Bool {
         elementStack.contains(elementName)
+    }
+
+    /// Recognise common Word list paragraph styles. Returns nil if the style
+    /// isn't a list style.
+    ///
+    /// Word's "List Paragraph" style is the most common offender: it marks
+    /// a paragraph as a list item visually, but the actual numbering binding
+    /// (numId / ilvl) is sometimes missing from the inline pPr, so a strict
+    /// numPr-only parser would render it as plain text.
+    private func parseListStyle(_ style: String) -> ListStyleKind? {
+        let n = style.lowercased().replacingOccurrences(of: " ", with: "")
+        // Default bullet styles
+        if n == "listparagraph" || n == "listbullet" || n == "bulletlist"
+            || n.hasPrefix("listbullet") || n == "ipl" {
+            return .bullet
+        }
+        // Numbered styles
+        if n == "listnumber" || n == "numberlist" || n.hasPrefix("listnumber") {
+            return .number
+        }
+        return nil
     }
 
     private func parseHeadingLevel(_ style: String) -> Int? {

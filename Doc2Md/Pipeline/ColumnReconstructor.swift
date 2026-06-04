@@ -33,9 +33,24 @@ struct ColumnReconstructor {
         // Detect number of columns
         let columns = detectColumns(blocks: blocks)
 
-        if columns.count <= 1 || (!forceColumns && columns.count == 1) {
-            // Single column: simple top-to-bottom, left-to-right sort
+        if columns.count <= 1 {
             return simpleSort(blocks: blocks)
+        }
+
+        // Safety check (v2): a real multi-column page has columns of
+        // comparable size. If one column dominates (>80% of blocks) or
+        // we somehow detected >4 columns, the detection is probably a
+        // false positive (e.g. an inset graphic or a sidebar element
+        // creating an artificial X gap). Fall back to simple sort.
+        //
+        // forceColumns: true overrides this check (used for cover pages
+        // where we know multi-column layout is likely).
+        if !forceColumns {
+            let total = blocks.count
+            let largest = columns.map(\.count).max() ?? 0
+            if columns.count > 4 || Double(largest) / Double(total) > 0.80 {
+                return simpleSort(blocks: blocks)
+            }
         }
 
         // Multi-column: read each column top-to-bottom, then join columns

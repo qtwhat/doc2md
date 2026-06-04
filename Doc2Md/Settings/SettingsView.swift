@@ -49,13 +49,20 @@ struct SettingsView: View {
             }
 
             Section {
-                Picker("主语言", selection: $settings.primaryLanguage) {
+                Toggle("自动语言检测（推荐）", isOn: $settings.automaticallyDetectsLanguage)
+
+                Text("启用后，Vision 自动判断图片/PDF 中是中文、英文、日文、韩文还是混合脚本，选择最合适的识别模型。关闭后，使用下方手动指定的语言顺序。")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Picker("主语言（手动模式）", selection: $settings.primaryLanguage) {
                     ForEach(OCRLanguageProfile.allCases) { lang in
                         Text(lang.displayName).tag(lang)
                     }
                 }
+                .disabled(settings.automaticallyDetectsLanguage)
 
-                Picker("副语言", selection: Binding(
+                Picker("副语言（手动模式）", selection: Binding(
                     get: { settings.secondaryLanguage ?? .chineseSimplified },
                     set: { settings.secondaryLanguage = $0 }
                 )) {
@@ -63,6 +70,7 @@ struct SettingsView: View {
                         Text(lang.displayName).tag(lang)
                     }
                 }
+                .disabled(settings.automaticallyDetectsLanguage)
             } header: {
                 Label("识别语言", systemImage: "globe")
             }

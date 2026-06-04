@@ -31,17 +31,36 @@ struct ConversionEngine {
         // Ebook
         "epub", "mobi", "azw", "azw3",
         // Email
-        "eml",
+        "eml", "msg",
+        // Image (OCR + EXIF)
+        "png", "jpg", "jpeg", "heic", "heif", "tiff", "tif", "bmp", "gif", "webp",
+        // Data / Notebook
+        "csv", "tsv", "json", "xml", "ipynb",
         // Archive
         "zip",
     ]
 
     func convert(url: URL) throws -> [URL] {
-        let ext = url.pathExtension.lowercased()
+        // Resolve via magic bytes — tolerant to renamed files where the
+        // extension and the actual content disagree (e.g., `report` with no
+        // extension, or a PDF saved as `notes.txt`). Falls back to the
+        // original extension when magic detection is inconclusive.
+        let ext = FileTypeDetector.resolve(url: url)
 
         switch ext {
         case "docx":
-            let markdown = try DocxConverter().convert(url: url)
+            // Image extraction: write embedded images to <basename>_assets/
+            // beside the source file, then reference them by relative path
+            // in the Markdown. Skipped in CLI string-output mode (see
+            // convertToMarkdown below).
+            let basename = url.deletingPathExtension().lastPathComponent
+            let assetsName = "\(basename)_assets"
+            let assetsDir = url.deletingLastPathComponent()
+                .appendingPathComponent(assetsName)
+            var conv = DocxConverter()
+            conv.assetsDir = assetsDir
+            conv.assetsRelativePrefix = assetsName
+            let markdown = try conv.convert(url: url)
             let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
             return [outputURL]
 
@@ -96,6 +115,36 @@ struct ConversionEngine {
             let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
             return [outputURL]
 
+        case "msg":
+            let markdown = try MsgConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
+        case "png", "jpg", "jpeg", "heic", "heif", "tiff", "tif", "bmp", "gif", "webp":
+            let markdown = try ImageConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
+        case "csv", "tsv":
+            let markdown = try CsvConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
+        case "json":
+            let markdown = try JsonConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
+        case "xml":
+            let markdown = try XmlConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
+        case "ipynb":
+            let markdown = try IpynbConverter().convert(url: url)
+            let outputURL = try MarkdownWriter.write(markdown: markdown, nextTo: url)
+            return [outputURL]
+
         case "zip":
             let outputURLs = try ZipHandler().processZip(url: url)
             if outputURLs.isEmpty {
@@ -103,6 +152,49 @@ struct ConversionEngine {
             }
             return outputURLs
 
+        default:
+            throw ConversionError.unsupportedFormat(ext)
+        }
+    }
+
+    // MARK: - String-output entry (for CLI stdout)
+    //
+    // Returns the converted Markdown as a String without writing to disk.
+    // Only supports single-output converters. ZIP archives and PDF
+    // structured-output modes are rejected (they produce multiple files,
+    // which can't sensibly stream to stdout).
+
+    func convertToMarkdown(url: URL) throws -> String {
+        let ext = FileTypeDetector.resolve(url: url)
+
+        switch ext {
+        case "docx":    return try DocxConverter().convert(url: url)
+        case "doc":     return try DocConverter().convert(url: url)
+        case "pdf":     return try PdfConverter().convert(url: url)
+        case "pptx", "ppt":
+                        return try PptxConverter().convert(url: url)
+        case "xlsx":    return try XlsxConverter().convert(url: url)
+        case "rtf":     return try RtfConverter().convert(url: url)
+        case "html", "htm":
+                        return try HtmlConverter().convert(url: url)
+        case "txt", "md", "markdown":
+                        return try TextConverter().convert(url: url)
+        case "odt":     return try OdtConverter().convert(url: url)
+        case "epub":    return try EpubConverter().convert(url: url)
+        case "mobi", "azw", "azw3":
+                        return try MobiConverter().convert(url: url)
+        case "eml":     return try EmlConverter().convert(url: url)
+        case "msg":     return try MsgConverter().convert(url: url)
+        case "png", "jpg", "jpeg", "heic", "heif", "tiff", "tif", "bmp", "gif", "webp":
+                        return try ImageConverter().convert(url: url)
+        case "csv", "tsv":
+                        return try CsvConverter().convert(url: url)
+        case "json":    return try JsonConverter().convert(url: url)
+        case "xml":     return try XmlConverter().convert(url: url)
+        case "ipynb":   return try IpynbConverter().convert(url: url)
+        case "zip":
+            throw ConversionError.unsupportedFormat(
+                "ZIP produces multiple outputs; use file output mode instead of stdout")
         default:
             throw ConversionError.unsupportedFormat(ext)
         }

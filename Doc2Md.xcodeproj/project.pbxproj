@@ -38,6 +38,16 @@
 		B100000000000000000000038 /* MobiConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000038 /* MobiConverter.swift */; };
 		B100000000000000000000039 /* EpubSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000039 /* EpubSettings.swift */; };
 		B100000000000000000000040 /* EmlConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000040 /* EmlConverter.swift */; };
+		B100000000000000000000041 /* ImageConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000041 /* ImageConverter.swift */; };
+		B100000000000000000000042 /* MetadataExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000042 /* MetadataExtractor.swift */; };
+		B100000000000000000000043 /* CsvConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000043 /* CsvConverter.swift */; };
+		B100000000000000000000044 /* JsonConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000044 /* JsonConverter.swift */; };
+		B100000000000000000000045 /* XmlConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000045 /* XmlConverter.swift */; };
+		B100000000000000000000046 /* IpynbConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000046 /* IpynbConverter.swift */; };
+		B100000000000000000000047 /* MsgConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000047 /* MsgConverter.swift */; };
+		B100000000000000000000048 /* FileTypeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000048 /* FileTypeDetector.swift */; };
+		B100000000000000000000049 /* CLIDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000049 /* CLIDispatcher.swift */; };
+		B100000000000000000000050 /* TableDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000050 /* TableDetector.swift */; };
 		B1000000000000000000000C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -72,6 +82,16 @@
 		A100000000000000000000038 /* MobiConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiConverter.swift; sourceTree = "<group>"; };
 		A100000000000000000000039 /* EpubSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpubSettings.swift; sourceTree = "<group>"; };
 		A100000000000000000000040 /* EmlConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmlConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000041 /* ImageConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000042 /* MetadataExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataExtractor.swift; sourceTree = "<group>"; };
+		A100000000000000000000043 /* CsvConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CsvConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000044 /* JsonConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JsonConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000045 /* XmlConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XmlConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000046 /* IpynbConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IpynbConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000047 /* MsgConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MsgConverter.swift; sourceTree = "<group>"; };
+		A100000000000000000000048 /* FileTypeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypeDetector.swift; sourceTree = "<group>"; };
+		A100000000000000000000049 /* CLIDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIDispatcher.swift; sourceTree = "<group>"; };
+		A100000000000000000000050 /* TableDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableDetector.swift; sourceTree = "<group>"; };
 		A10000000000000000000009 /* MarkdownWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownWriter.swift; sourceTree = "<group>"; };
 		A1000000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000000000000000000000B /* Doc2Md.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Doc2Md.entitlements; sourceTree = "<group>"; };
@@ -109,6 +129,7 @@
 				C10000000000000000000007 /* Settings */,
 				C10000000000000000000008 /* Pipeline */,
 				C10000000000000000000009 /* Services */,
+				C1000000000000000000000A /* CLI */,
 				A1000000000000000000000C /* Assets.xcassets */,
 				A1000000000000000000000A /* Info.plist */,
 				A1000000000000000000000B /* Doc2Md.entitlements */,
@@ -143,6 +164,14 @@
 			A100000000000000000000037 /* XlsxConverter.swift */,
 			A100000000000000000000038 /* MobiConverter.swift */,
 				A100000000000000000000040 /* EmlConverter.swift */,
+				A100000000000000000000041 /* ImageConverter.swift */,
+				A100000000000000000000042 /* MetadataExtractor.swift */,
+				A100000000000000000000043 /* CsvConverter.swift */,
+				A100000000000000000000044 /* JsonConverter.swift */,
+				A100000000000000000000045 /* XmlConverter.swift */,
+				A100000000000000000000046 /* IpynbConverter.swift */,
+				A100000000000000000000047 /* MsgConverter.swift */,
+				A100000000000000000000048 /* FileTypeDetector.swift */,
 			);
 			path = Converters;
 			sourceTree = "<group>";
@@ -175,6 +204,7 @@
 				A100000000000000000000023 /* StructuredOutput.swift */,
 				A100000000000000000000024 /* ColumnReconstructor.swift */,
 				A100000000000000000000025 /* PipelineConfig.swift */,
+				A100000000000000000000050 /* TableDetector.swift */,
 			);
 			path = Pipeline;
 			sourceTree = "<group>";
@@ -185,6 +215,14 @@
 				A100000000000000000000026 /* FolderWatcher.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000A /* CLI */ = {
+			isa = PBXGroup;
+			children = (
+				A100000000000000000000049 /* CLIDispatcher.swift */,
+			);
+			path = CLI;
 			sourceTree = "<group>";
 		};
 		C10000000000000000000006 /* Products */ = {
@@ -295,6 +333,16 @@
 			B100000000000000000000038 /* MobiConverter.swift in Sources */,
 			B100000000000000000000039 /* EpubSettings.swift in Sources */,
 				B100000000000000000000040 /* EmlConverter.swift in Sources */,
+				B100000000000000000000041 /* ImageConverter.swift in Sources */,
+				B100000000000000000000042 /* MetadataExtractor.swift in Sources */,
+				B100000000000000000000043 /* CsvConverter.swift in Sources */,
+				B100000000000000000000044 /* JsonConverter.swift in Sources */,
+				B100000000000000000000045 /* XmlConverter.swift in Sources */,
+				B100000000000000000000046 /* IpynbConverter.swift in Sources */,
+				B100000000000000000000047 /* MsgConverter.swift in Sources */,
+				B100000000000000000000048 /* FileTypeDetector.swift in Sources */,
+				B100000000000000000000049 /* CLIDispatcher.swift in Sources */,
+				B100000000000000000000050 /* TableDetector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

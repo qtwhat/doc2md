@@ -207,7 +207,15 @@ struct PdfConverter {
         }
 
         request.recognitionLevel = .accurate
-        request.recognitionLanguages = OCRSettings.shared.recognitionLanguages
+        // Language selection: prefer Vision's auto-detection (handles
+        // CJK-dominant pages correctly even with English as the user's
+        // primary). Manual order applies only when the user explicitly
+        // disables auto-detect in Settings.
+        if OCRSettings.shared.automaticallyDetectsLanguage {
+            request.automaticallyDetectsLanguage = true
+        } else {
+            request.recognitionLanguages = OCRSettings.shared.recognitionLanguages
+        }
         request.usesLanguageCorrection = true
 
         if #available(macOS 14.0, *) {
@@ -225,15 +233,28 @@ struct PdfConverter {
             throw error
         }
 
-        // Text reconstruction strategy:
-        // - Cover page: use column-aware reconstruction to handle multi-column layouts
-        // - All other pages: use SIMPLE top-to-bottom ordering (preserves Vision's original order)
-        //   This avoids content loss from spatial re-grouping artifacts
-        let text: String
-        if isCoverPage {
-            text = ColumnReconstructor.reconstruct(observations: observations, forceColumns: true)
-        } else {
-            text = simpleTextFromObservations(observations)
+        // Text reconstruction strategy (v2):
+        // 1. Detect tables (grids with >= 3 aligned rows of >= 2 columns).
+        //    Extract those observations into Markdown table blocks.
+        // 2. Run ColumnReconstructor on the remaining observations.
+        // 3. Concatenate flow text + table markdown blocks.
+        //
+        // ColumnReconstructor's internal safety net:
+        //   - Detects column count via X-gap clustering (gap > 15% of width)
+        //   - Falls back to simple sort when 1 column / >4 columns / one
+        //     column holds >80% of blocks (false positive)
+        // Cover pages keep forceColumns=true so the safety check is skipped.
+        let tables = TableDetector.detect(observations: observations)
+        let tableIndices = Set(tables.flatMap { $0.observationIndices })
+        let nonTableObs = observations.enumerated()
+            .filter { !tableIndices.contains($0.offset) }
+            .map(\.element)
+        var text = ColumnReconstructor.reconstruct(
+            observations: nonTableObs,
+            forceColumns: isCoverPage
+        )
+        for t in tables {
+            text += "\n\n" + t.markdown
         }
 
         return (observations, text)
